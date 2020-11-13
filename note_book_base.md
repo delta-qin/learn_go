@@ -136,6 +136,17 @@ var (
 
 匿名变量 `_` 
 
+```go 
+var v1 int32
+v1 = 1
+
+var v2 int32 = 1
+
+var v3 = int32(1)
+
+// 强制类型转换
+v4 := int32(1)
+```
 
 # 常量
 
@@ -1470,20 +1481,640 @@ func main() {
 
 # 结构体
 
-```go
+## 自定义类型和类型别名
+基于内置类型构造自己的类型
 
+类型别名编译之后不存在
+
+```go
+// 自定义类型，编译之后依旧是自定义类型
+var myInt int
+// 类型别名，编译之后替换为int，编写的时候更加清晰一些
+	// 代码的作用，错误代码等等
+var myint = int
+```
+
+注意：rune 就是 int32 的类型别名。
+
+## 结构体定义
+
+```go
+// 丰富维度的数据
+// 自己造类型
+type st1 struct {
+	name  string
+	age   int
+	gen   string
+	hobby []string
+}
+
+func main() {
+	var de st1
+	de.name = "de"
+	de.age = 12
+	de.gen = "男"
+	de.hobby = []string{"篮球", "足球"}
+
+	fmt.Println(de)
+	fmt.Printf("%T\n", de)
+	fmt.Println(de.age)
+// 	{de 12 男 [篮球 足球]}
+// main.st1
+// 12
+}
+```
+
+## 匿名结构体
+临时使用，不浪费全局空间 
+
+```go
+func main() {
+	// 直接使用变量声明
+	var s struct{
+		x string
+		y int 
+	}{"de", 12,}
+
+	s.x = "de"
+	fmt.Printf("%T\n", s)
+	fmt.Println(s)
+}
+```
+
+## 结构体初始化
+
+```go 
+type person struct {
+	name string
+	age  int
+}
+
+// kv初始化
+var p3 = person{
+	name: "deltaqin",
+	age: 16,
+}
+// 按照值列表顺序初始化
+p4 := person {
+	"deltaqin",
+	12,
+}
+```
+
+参照切片和map初始化
+
+```go
+s1 := []int {1,2,3,4}
+m1 := map[string]int {
+	"stu1": 1,
+	"stu2": 2,
+}
+```
+
+## 指针类型的结构体
+由于go不可以修改指针，所以改变指针执行的内存地址上的值的时候可以不加 `*`
+
+```go
+type st1 struct {
+	name string
+	age  int
+}
+
+func f(x st1) {
+	x.name = "qin1"
+}
+
+func f1(x *st1) {
+	(*x).name = "qin1"
+}
+
+func f2(x *st1) {
+	x.name = "qin2"
+}
+
+func main() {
+	var p st1
+	p.name = "qin"
+	p.age = 1
+	f(p)
+	fmt.Println(p)
+	f1(&p)
+	fmt.Println(p)
+	f2(&p)
+	fmt.Println(p)
+}
 ```
 
 ```go
+	var p st1
+	fmt.Printf("%p\n", &p) // 0xc0000044a0
+
+	// p1 是结构体指针
+	var p1 = new(st1)
+	fmt.Printf("%x\n", p1) // &{ 0}
+	fmt.Printf("%x\n", &p1) // c000006030
+	fmt.Printf("%p\n", &p1) // 0xc000006030
+	fmt.Printf("%#v\n", p1) // &main.st1{name:"", age:0}
+	fmt.Printf("%T\n", p1) // *main.st1
+	// 可以直接对结构体指针使用 . 来获取属性
+	p1.name = "deltaqin"
+	p1.age = 12
+	fmt.Printf("%#v", p1) // &main.st1{name:"deltaqin", age:12}
+
+```
+
+### 在内存上是连续的地址
+```go
+	p2 := st1{
+		name: string("deltaqin"),
+		age: int8(20),
+	}
+
+	fmt.Printf("%p\n", &(p2.name))
+	fmt.Printf("%p\n", &(p2.age))
+	// 0xc0000045c0，16位
+	// 0xc0000045d0，16位
+	// 还有内存对齐，在必要的时候
+```
+
+## 构造函数
+- 可以返回的是指针
+- 可以直接返回值，结构体本身是值类型不是引用类型，返回的时候就是值拷贝
+
+- 开头使用new
+
+
+```go
+type person struct {
+	name string
+	age  int
+}
+
+func newPerson(name string, age int) *person {
+	return &person{
+		name: name,
+		age:  age,
+	}
+}
+
+func newPerson2(name string, age int) person {
+	return person{
+		name: name,
+		age:  age,
+	}
+	// {deltaqin 18}
+	// 0xc000004500
+}
+```
+
+## 补充：标识符
+变量名，函数名，类名，方法名。**首字母大写，就是对外部包可见的。**
+
+`fmt.Println()`
+
+## 方法和接收者
+**方法是作用于特定类型的函数**,
+
+接收者就是调用该方法的类型
+
+`func (接收者名字 接收者类型) 函数名字(参数名 参数类型) (返回参数) {}`
+
+接收者名字最好使用接收者类型的首字母，而不是 this 和 self
+
+```go
+type dog struct {
+	name string
+}
+
+func newDog(name string ) *dog {
+	return &dog{
+		name: name,
+	}
+}
+// 和函数的区别就是函数名前面需要制定具体的类型变量，
+// 这个只是值拷贝，不是指针拷贝
+// 多用类型名首字母小写
+func (d dog) wang() {
+	fmt.Println("wangwang")
+}
+
+func main() {
+	// 方法是作用于特定类型的函数
+	d1 := newDog("de")
+	d1.wang()
+}
+```
+
+
+## 值接收和指针接收的区别
+- 值接收不会改变类的属性，是值传递，结构体是值类型，是复制
+
+- **指针接收就可以改变类的属性**
+
+
+```go
+func newDog(name string ) *dog {
+	return &dog{
+		name: name,
+	}
+}
+
+func (d dog) wang() {
+	// fmt.Println("wangwang")
+	d.name = "1"
+}
+
+func (d *dog) wang1() {
+	// fmt.Println("wangwang")
+	d.name = "2"
+}
+
+func main() {
+	// 方法是作用于特定类型的函数
+	d1 := newDog("de")
+	d1.wang()
+	fmt.Println(d1)
+	d1.wang1()
+	fmt.Println(d1)
+
+}
+```
+
+## 任意类型添加方法
+只能给自己的包里面的类添加方法，想要给别的包需要自定义类型
+
+```go 
+type myInt int
+
+func (i myInt) my()  {
+	fmt.Println("直接操作int不可以，不是自己包定义的")
+}
+
+func main() {
+	m := myInt(10)
+	m.my()
+	fmt.Println(m)
+}
+```
+
+## 结构体匿名字段
+相同类型只能写一个，字段少且简单的场景
+
+```go
+type stu struct {
+	string
+	int
+}
+
+func main() {
+	stu1 := stu{
+		"de",
+		1,
+	}
+	fmt.Println(stu1)
+}
+```
+
+## 结构体嵌套
+匿名结构体嵌套在里面，使用 `.` 作为属性查询的时候，现在自己的属性，之后在匿名结构体属性里面查找
+
+匿名嵌套结构体，可以省略中间字段的名字
+
+匿名嵌套结构体的字段冲突解决，直接写全名
+
+```go
+type company struct{
+	name string
+	id int64
+}
+
+type address struct{
+	name string
+	id int64
+}
+
+type student struct{
+	name string
+	id int64
+	address
+	company
+}
+
+func main() {
+	stu := student{
+		name: "de",
+		id : 1, 
+		address: address{
+			name: "de",
+			id: 1,
+		},
+	}
+	fmt.Println(stu.address.name)
+}
+```
+
+## 结构体继承
+
+```go
+type animal struct {
+	name string
+}
+
+func (a animal) move() {
+	fmt.Printf("%s move", a.name)
+}
+
+type dog struct {
+	feet uint8
+	animal
+}
+
+func (d dog) wang()  {
+	fmt.Printf("%s wang\n", d.name)
+}
+func main() {
+	d := dog{
+		feet:4,
+		animal: animal{
+			name: "de",
+		},
+	}
+	d.wang()
+	// 继承匿名 animal，方法就全有了，变相实现继承
+	d.move()
+}
+```
+
+## 结构体和json
+- Name不大写外界无法使用
+- 反序列化需要传递指针
+
+
+```go 
+import (
+	"encoding/json"
+	"fmt"
+)
+
+type person struct {
+	// Name不大写外界无法使用
+	Name string `json:"name" db:"name" ini:"name"`
+	Age  int    `json:"age"`
+}
+
+func main() {
+	p1 := person{
+		Name: "de",
+		Age:  16,
+	}
+
+	b, err := json.Marshal(p1)
+	if err != nil {
+		fmt.Printf("err: %v", err)
+		return
+	}
+
+	fmt.Printf("%v\n", string(b))
+
+	// 字符串就是字节数组的切片
+	str:= `{"name":"de", "age":12}`
+	var p2 person
+	// 反序列化需要传递指针
+	json.Unmarshal([]byte(str), &p2)
+	fmt.Printf("%#v\n", p2)
+
+}
 
 ```
 
 # 接口
+接口是一种类型，不关心变量是什么类型，只关心可以调用什么方法
 
+基本数据类型，结构体类型，
+
+- 面向接口编程：只关心方法，实现方法就可以了，**解耦**
+- 面向对象编程：关心属性和方法
+
+## 接口定义与实现（面向接口编程）
+**实现了接口的所有方法，这个变量就实现了这个接口，可以叫做这个接口类型的变量**
 
 ```go
-
+type 接口名 interface {
+	方法名(参数)(返回值)
+}
 ```
+
+```go
+// 只规定方法
+type speaker interface {
+	// 实现了speak方法的变量就是该接口类型
+	speak()
+}
+
+type dog struct{}
+type cat struct{}
+
+func (d dog) speak() {
+	fmt.Println("wang")
+}
+
+func (c cat)speak()  {
+	fmt.Println("miao")
+}
+
+func attack(s speaker)  {
+	s.speak()
+}
+
+func main() {
+	var d dog
+	var c cat
+	attack(d)
+	attack(c)
+}
+```
+
+## 接口原理
+接口保存的时候分为 两部分：**值的类型和值本身**，实现了存储不同类型和不同的值
+
+实现类直接赋值给接口类型的变量的时候，接口变量变成了具体的实现类（可以理解为多态）
+
+```go
+type animal interface {
+	eat()
+}
+
+type cat struct{}
+type dog struct{}
+
+func (c cat) eat() {
+	fmt.Println("fish")
+}
+
+func (d dog) eat() {
+	fmt.Println("骨头")
+}
+
+func main() {
+	var a animal
+	a = cat{}
+	a.eat()
+	a = dog{}
+	a.eat()
+}
+```
+
+## 值接收者和指针接收者
+值接收者：可以接收指针和值类型
+
+```go
+type animal interface {
+	eat()
+}
+
+type cat struct{}
+type dog struct{}
+
+func (c cat) eat() {
+	fmt.Println("fish")
+}
+
+func (d dog) eat() {
+	fmt.Println("骨头")
+}
+
+func main() {
+	var a1 animal
+	c1 := cat{}
+	a1 = c1
+	a1.eat()
+}
+```
+
+指针接收者：可以接收指针类型
+
+```go
+type animal interface {
+	eat()
+}
+
+type cat struct{}
+type dog struct{}
+
+func (c *cat) eat() {
+	fmt.Println("fish")
+}
+
+func (d *dog) eat() {
+	fmt.Println("骨头")
+}
+
+func main() {
+	var a1 animal
+	c1 := cat{}
+	// 注意接口接收的类型应该和实现的方法里面定义的需要的类型一致，所以这里使用取地址符
+	a1 = &c1
+	a1.eat()
+}
+```
+
+## 接口和类型的关系
+**同一结构体可以实现多个接口**
+
+接口也可以嵌套，直接将接口名字写在接口定义里面即可
+
+将接口看做是一个规章制度，不是一个具体的对象拥有什么样的属性
+
+
+## 空接口类型
+如果一个结构体实现了一个接口所有的方法，那就是实现了这个接口
+
+如果一个接口什么方法都没有，任何类型都实现了这个接口
+
+`type a interface{}`
+
+`interface{}` 没必要起名字
+
+### 空接口作为函数的参数
+不管什么类型都可以传递给函数，就可以将函数的参数设置为空接口 `...interface{}`
+
+```go
+func show(a interface{}){
+	fmt.Println("type:%T value:%v\n", a, a)
+}
+```
+### 空接口作为 map 的值
+使用空接口实现可以保存任意值的字典
+
+```go
+func main() {
+	var m1 map[string]interface{}
+	m1 = make(map[string]interface{}, 16)
+	m1["1"] = "1"
+	m1["2"] = 2
+	m1["3"] = true
+	m1["4"] = [...]string{"1","2","3"}
+	fmt.Println(m1)
+}
+```
+
+## 类型断言
+空接口可以存储任意类型的值，那我们如何获取其存储的具体数据呢？
+
+### 接口值
+一个接口的值（简称接口值）是由一个具体类型和具体类型的值两部分组成的。这两部分分别称为接口的动态类型和动态值。
+
+```go
+var w io.Writer
+w = os.Stdout
+w = new(bytes.Buffer)
+w = nil
+```
+
+想要判断空接口中的值这个时候就可以使用类型断言，其语法格式：`x.(T)`
+- x：表示类型为interface{}的变量
+- T：表示断言x可能是的类型。
+
+该语法返回两个参数，第一个参数是x转化为T类型后的变量，第二个值是一个布尔值，若为true则表示断言成功，为false则表示断言失败。
+
+```go
+func main() {
+	var x interface{}
+	x = "de"
+	v, ok := x.(string)
+	if ok {
+		fmt.Println(v)
+	} else {
+		fmt.Println("类型断言失败")
+	}
+}
+```
+
+上面的示例中如果要断言多次就需要写多个if判断，这个时候我们可以使用switch语句来实现：
+
+```go
+func justifyType(x interface{}) {
+	switch v := x.(type) {
+	case string:
+		fmt.Printf("x is a string，value is %v\n", v)
+	case int:
+		fmt.Printf("x is a int is %v\n", v)
+	case bool:
+		fmt.Printf("x is a bool is %v\n", v)
+	default:
+		fmt.Println("unsupport type！")
+	}
+}
+```
+
+因为空接口可以存储任意类型值的特点，所以空接口在Go语言中的使用十分广泛。
+
+关于接口需要注意的是，只有当有两个或两个以上的具体类型必须以相同的方式进行处理时才需要定义接口。不要为了接口而写接口，那样只会增加不必要的抽象，导致不必要的运行时损耗。
+
+# 包
+只有main包才可以编译为可执行文件
+
+
 
 # 并发编程
 
